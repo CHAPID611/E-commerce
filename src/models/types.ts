@@ -6,8 +6,12 @@ export interface ProductAttributes {
   name: string;
   price: number;
   username: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  categoryId?: number;
+  description?: string;
+  imageUrl?: string;
+  stock?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProductCreationAttributes extends Optional<ProductAttributes, 'id'> {}
@@ -20,8 +24,8 @@ export interface OrderAttributes {
   username: string;
   totalAmount: number;
   status: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface OrderCreationAttributes extends Optional<OrderAttributes, 'id'> {}
@@ -43,3 +47,33 @@ export interface OrderProductCreationAttributes extends Optional<OrderProductAtt
 
 export interface OrderProductInstance extends Model<OrderProductAttributes, OrderProductCreationAttributes>, OrderProductAttributes {}
 
+// User interfaces
+export interface UserAttributes {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  role: 'user' | 'admin';
+  firstName?: string;
+  lastName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
+
+export interface UserInstance extends Model<UserAttributes, UserCreationAttributes>, UserAttributes {}
+
+// Category interfaces
+export interface CategoryAttributes {
+  id: number;
+  name: string;
+  description?: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CategoryCreationAttributes extends Optional<CategoryAttributes, 'id'> {}
+
+export interface CategoryInstance extends Model<CategoryAttributes, CategoryCreationAttributes>, CategoryAttributes {}

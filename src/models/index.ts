@@ -1,20 +1,21 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import { initProductModel } from './Product';
+import { initOrderModel } from './Order';
+import { initOrderProductModel } from './OrderProduct';
+import { initUserModel } from './User';
+import { initCategoryModel } from './Category';
 
 // Load environment variables
 dotenv.config();
 
-// Create Sequelize instance
-const dbName = process.env.DB_NAME || 'ecommerce';
-const dbUser = process.env.DB_USER || 'postgres';
-const dbPassword = process.env.DB_PASSWORD || 'postgres';
-const dbHost = process.env.DB_HOST || 'localhost';
-const dbPort = process.env.DB_PORT || '5432';
-
-export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: dbHost,
-  port: parseInt(dbPort, 10),
+const sequelize = new Sequelize({
   dialect: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'ecommerce',
   logging: process.env.NODE_ENV !== 'production' ? console.log : false,
   pool: {
     max: 5,
@@ -25,7 +26,7 @@ export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
 });
 
 // Test the connection
-export const testConnection = async () => {
+const testConnection = async () => {
   try {
     await sequelize.authenticate();
     console.log('Connection to the database has been established successfully.');
@@ -36,61 +37,50 @@ export const testConnection = async () => {
   }
 };
 
-// Import models
-import { initProductModel } from './Product';
-import { initOrderModel } from './Order';
-import { initOrderProductModel } from './OrderProduct';
-
 // Initialize models
-export const Product = initProductModel(sequelize);
-export const Order = initOrderModel(sequelize);
-export const OrderProduct = initOrderProductModel(sequelize);
+const ProductModel = initProductModel(sequelize);
+const OrderModel = initOrderModel(sequelize);
+const OrderProductModel = initOrderProductModel(sequelize);
+const UserModel = initUserModel(sequelize);
+const CategoryModel = initCategoryModel(sequelize);
 
 // Define relationships
-Order.belongsToMany(Product, { 
-  through: OrderProduct,
-  foreignKey: 'orderId',
-  otherKey: 'productId'
+CategoryModel.hasMany(ProductModel, {
+  foreignKey: 'categoryId',
+  as: 'products'
 });
 
-Product.belongsToMany(Order, { 
-  through: OrderProduct,
-  foreignKey: 'productId',
-  otherKey: 'orderId'
+ProductModel.belongsTo(CategoryModel, {
+  foreignKey: 'categoryId',
+  as: 'category'
 });
 
-// Export models
-export { Product as ProductModel };
-export { Order as OrderModel };
-export { OrderProduct as OrderProductModel };
-
-const { Sequelize } = require('sequelize');
-
-const sequelize = new Sequelize('tienda_db', 'postgres', '1234', {
-    host: 'localhost',
-    dialect: 'postgres',
-    logging: console.log
+OrderModel.belongsToMany(ProductModel, {
+  through: OrderProductModel,
+  as: 'products'
 });
 
-const products = require('./products')(sequelize, Sequelize);
+ProductModel.belongsToMany(OrderModel, {
+  through: OrderProductModel,
+  as: 'orders'
+});
 
-const initDB = async () => {
-    try {
-       
-        await sequelize.sync({ force: false });
-        console.log('Base de datos sincronizada correctamente');
-        
-        // Creamos un producto de prueba
-        await products.create({
-            name: 'Producto de prueba',
-            description: 'Este es un producto de prueba'
-        });
-        console.log('Producto de prueba creado');
-    } catch (error) {
-        console.error('Error al sincronizar la base de datos:', error);
-    }
+UserModel.hasMany(OrderModel, {
+  foreignKey: 'userId',
+  as: 'orders'
+});
+
+OrderModel.belongsTo(UserModel, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+export {
+  sequelize,
+  ProductModel,
+  OrderModel,
+  OrderProductModel,
+  UserModel,
+  CategoryModel,
+  testConnection
 };
-
-initDB();
-
-module.exports = { sequelize, products }
