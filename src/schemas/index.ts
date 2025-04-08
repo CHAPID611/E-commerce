@@ -1,25 +1,53 @@
-import { productTypeDefs } from './types/product';
-import { orderTypeDefs } from './types/order';
-import { queryTypeDefs } from './queries';
-import { mutationTypeDefs } from './mutations';
+import { types } from './types';
+import { gql } from 'apollo-server-express';
+import { mergeTypeDefs } from '@graphql-tools/merge';
 
-// Combine all type definitions
-export const typeDefs = [
-  productTypeDefs,
-  orderTypeDefs,
-  queryTypeDefs,
-  mutationTypeDefs
-];
+// Root Query and Mutation types
+const rootTypeDefs = gql`
+  type Query {
+    # Product queries
+    products: [Product!]!
+    product(id: ID!): Product
+    productsByCategory(categoryId: ID!): [Product!]!
 
-const {gql} = require('graphql-tag');
+    # Order queries
+    orders: [Order!]!
+    order(id: ID!): Order
+    myOrders: [Order!]!
 
-const typeDefs = gql`
-    type Product {
-        name: String
-        description: String
-    }
-    type Query {
-        allProducts:[Product!]!
-    }
+    # Category queries
+    categories: [Category!]!
+    category(id: ID!): Category
+
+    # User queries
+    users: [User!]!
+    user(id: ID!): User
+    me: User
+  }
+
+  type Mutation {
+    # Product mutations
+    createProduct(input: ProductInput!): Product!
+    updateProduct(id: ID!, input: ProductInput!): Product!
+    deleteProduct(id: ID!): Boolean!
+
+    # Order mutations
+    createOrder(input: OrderInput!): Order!
+    updateOrderStatus(id: ID!, status: String!): Order!
+    cancelOrder(id: ID!): Order!
+
+    # User mutations
+    register(input: RegisterInput!): AuthPayload!
+    login(input: LoginInput!): AuthPayload!
+    updateUser(id: ID!, input: UserInput!): User!
+    deleteUser(id: ID!): Boolean!
+
+    # Category mutations
+    createCategory(input: CategoryInput!): Category!
+    updateCategory(id: ID!, input: CategoryInput!): Category!
+    deleteCategory(id: ID!): Boolean!
+  }
 `;
-module.exports = typeDefs;
+
+// Combine all type definitions using mergeTypeDefs
+export const typeDefs = mergeTypeDefs([rootTypeDefs, ...types]);

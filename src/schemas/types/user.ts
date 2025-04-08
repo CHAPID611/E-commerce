@@ -1,4 +1,4 @@
-import { gql } from 'apollo-server-express';
+import { gql } from 'graphql-tag';
 
 export const userTypes = gql`
   type User {
@@ -6,26 +6,20 @@ export const userTypes = gql`
     username: String!
     email: String!
     role: String!
-    firstName: String
-    lastName: String
-    orders: [Order]
-    createdAt: String!
-    updatedAt: String!
+    orders: [Order!]
+    createdAt: String
+    updatedAt: String
   }
 
-  input CreateUserInput {
+  type AuthPayload {
+    token: String!
+    user: User!
+  }
+
+  input RegisterInput {
     username: String!
     email: String!
     password: String!
-    firstName: String
-    lastName: String
-  }
-
-  input UpdateUserInput {
-    email: String
-    password: String
-    firstName: String
-    lastName: String
   }
 
   input LoginInput {
@@ -33,8 +27,10 @@ export const userTypes = gql`
     password: String!
   }
 
-  type AuthPayload {
-    token: String!
-    user: User!
+  input UserInput {
+    username: String
+    email: String
+    password: String
+    role: String
   }
 `;
