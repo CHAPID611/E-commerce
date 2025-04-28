@@ -5,16 +5,12 @@ export const initProductModel = (sequelize: Sequelize) => {
   const Product = sequelize.define<ProductInstance>('Product', {
     id: {
       type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
+      primaryKey: true
     },
     name: {
       type: DataTypes.STRING,
       allowNull: false
-    },
-    description: {
-      type: DataTypes.STRING,
-      allowNull: true
     },
     price: {
       type: DataTypes.DECIMAL(10, 2),
@@ -23,23 +19,6 @@ export const initProductModel = (sequelize: Sequelize) => {
     username: {
       type: DataTypes.STRING,
       allowNull: false
-    },
-    categoryId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Categories',
-        key: 'id'
-      }
-    },
-    stock: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0
-    },
-    imageUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -52,8 +31,10 @@ export const initProductModel = (sequelize: Sequelize) => {
       defaultValue: DataTypes.NOW
     }
   }, {
-    tableName: 'products'
+    tableName: 'products',
+    timestamps: true
   });
 
   return Product;
 };
+

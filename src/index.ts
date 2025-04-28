@@ -1,32 +1,121 @@
-const {ApolloServer}= require('@apollo/server');
-const {expressMiddleware} = require('@apollo/server/express4');
-const {ApolloServerPluginDrainHttpServer} = require('@apollo/server/plugin/drainHttpServer');
-const cors = require ('cors');
-const http = require ('http');
-const express = require('express');
-const types = require('./schemas');
-const resolver = require('./resolvers');
-const {sequelize : sq} = require('./models');
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const app = express();
-const httpServer = http.createServer(app);
-const server = new ApolloServer({
-    typeDefs: types,
-    resolvers: resolver,
-    plugins: [ApolloServerPluginDrainHttpServer({httpServer})],
-});
-(async () =>{
-    await server.start();
-    app.use('/', cors(), express.json(),expressMiddleware(server));
+// Import schema and resolvers
+import { typeDefs } from './schemas';
+import { resolvers } from './resolvers';
 
-    await new Promise((resolve) => httpServer.listen({port: 4000}, resolve));
-    console.log(`server ready at http://localhost:4000/`);
+// Import database models
+import { sequelize } from './models';
 
-    sq.authenticate().then(() => {
-        console.log('Database conected');
-    }).catch((error) => {
-        console.log(error);
+// Load environment variables
+dotenv.config();
+
+// Define the context interface for authenticated users
+export interface MyContext {
+  token?: string;
+  user?: {
+    username: string;
+    role?: 'user' | 'admin';
+  };
+}
+
+// JWT interface for decoded token
+interface DecodedToken {
+  username: string;
+  role: string;
+  exp: number;
+  [key: string]: any;
+}
+
+// Function to validate JWT token and extract user information
+const validateToken = async (token: string): Promise<{ username: string; role: string } | null> => {
+  if (!token || !token.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const tokenValue = token.split(' ')[1];
+  
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(
+      tokenValue, 
+      process.env.JWT_SECRET || 'your_jwt_secret_key'
+    ) as DecodedToken;
+    
+    return { 
+      username: decoded.username,
+      role: decoded.role || 'user'
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+async function startServer() {
+  try {
+    // Initialize database connection
+    await sequelize.sync();
+    console.log('Database synchronized successfully');
+
+    const app = express();
+    const httpServer = http.createServer(app);
+
+    // Create Apollo Server instance
+    const server = new ApolloServer<MyContext>({
+      typeDefs,
+      resolvers,
+      introspection: process.env.NODE_ENV !== 'production',
     });
-}) ().catch((err)=>{
-    console.error(err)
+
+    // Start the Apollo Server
+    await server.start();
+
+    // Apply middleware
+    app.use(
+      '/graphql',
+      cors<cors.CorsRequest>(),
+      bodyParser.json(),
+      expressMiddleware(server, {
+        context: async ({ req }) => {
+          const token = req.headers.authorization || '';
+          const user = await validateToken(token);
+          return { token, user };
+        },
+      }),
+    );
+
+    // API health check endpoint
+    app.get('/health', (_, res) => {
+      res.status(200).send('OK');
+    });
+
+    // Start the HTTP server
+    const PORT = process.env.PORT || 4000;
+    await new Promise<void>((resolve) => httpServer.listen({ port: PORT }, resolve));
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+    console.log(`Health check endpoint: http://localhost:${PORT}/health`);
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
+
+// Handle any uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
